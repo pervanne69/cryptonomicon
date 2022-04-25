@@ -6,11 +6,13 @@
           <div class="max-w-xs">
             <label for="wallet" class="block text-sm font-medium text-gray-700"
             >Тикер {{ ticker }}</label
+
             >
             <div class="mt-1 relative rounded-md shadow-md">
               <input
                   v-model="ticker"
                   @keydown.enter="add"
+                  @change="checkExistsAndSimilarTickers"
                   type="text"
                   name="wallet"
                   id="wallet"
@@ -18,21 +20,17 @@
                   placeholder="Например DOGE"
               />
             </div>
-            <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap">
-            <span class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              BTC
-            </span>
-              <span class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              DOGE
-            </span>
-              <span class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              BCH
-            </span>
-              <span class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              CHD
-            </span>
+            <div style="display: flex;">
+              <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
+                   v-for="sup of logCurrentSupposeTickers()">
+                <span class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
+                  @click="clickToSuppose(sup)"
+                >
+                  {{sup}}
+                </span>
+              </div>
             </div>
-            <div class="text-sm text-red-600">Такой тикер уже добавлен</div>
+            <div class="text-sm text-red-600" v-if="tickers.find(t => t.name.toLowerCase() === ticker.toLowerCase())">Такой тикер уже добавлен</div>
           </div>
         </div>
         <button
@@ -69,7 +67,7 @@
         >
           <div class="px-4 py-5 sm:p-6 text-center">
             <dt class="text-sm font-medium text-gray-500 truncate">
-              {{t.name}} - USD
+              {{t.name.toUpperCase()}} - USD
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900">
               {{t.price}}
@@ -98,7 +96,7 @@
       <hr v-if="sel" class="w-full border-t border-gray-600 my-4" />
       <section v-if="sel" class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{sel.name}} - USD
+          {{sel.name.toUpperCase()}} - USD
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
@@ -149,7 +147,17 @@ export default {
       ticker: '',
       tickers: [],
       sel: null,
-      graph: []
+      data: {},
+      coinList: [],
+      currentListOfSupposeCoins: [],
+      graph: [],
+      coinListFunc: setTimeout(async () => {
+        const f = await fetch('https://min-api.cryptocompare.com/data/top/totaltoptiervolfull?limit=100&tsym=USD&api_key=ec84f8efeadac885c129e0c70798f75f470ec257016a933fd645439542cbd8ce')
+        this.data = await f.json()
+        this.coinList = this.data['Data'].map(t => {
+           return t['CoinInfo']['Name']
+        })
+      }, 1000)
     }
   },
   methods: {
@@ -158,7 +166,7 @@ export default {
         name: this.ticker,
         price: '-'
       }
-      if (currentTicker.name) {
+      if (currentTicker.name && !this.checkExistsAndSimilarTickers()) {
         this.tickers.push(currentTicker)
         setInterval(async () => {
           const f = await fetch(
@@ -187,6 +195,31 @@ export default {
     select(ticker) {
       this.sel = ticker
       this.graph = []
+    },
+    checkExistsAndSimilarTickers() {
+      const currentTicker = {
+        name: this.ticker,
+        price: '-'
+      }
+      const alreadyExists = this.tickers.find(t => t.name.toLowerCase() === currentTicker.name.toLowerCase())
+      if (!(currentTicker.name && !alreadyExists)) {
+        const btn = document.querySelector('.my-4')
+        btn.setAttribute('disabled', 'disabled')
+        return true
+      }
+      const btn = document.querySelector('.my-4')
+      btn.removeAttribute('disabled')
+      return false
+    },
+    logCurrentSupposeTickers() {
+      let arr = this.coinList.filter(coin => coin.toLowerCase().includes(this.ticker.toLowerCase()))
+      if (arr.length > 4) {
+        arr = arr.slice(0, 4)
+      }
+      return arr
+    },
+    clickToSuppose(s) {
+      this.ticker = s
     }
   }
 }
