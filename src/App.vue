@@ -12,7 +12,6 @@
               <input
                   v-model="ticker"
                   @keydown.enter="add"
-                  @change="checkExistsAndSimilarTickers"
                   type="text"
                   name="wallet"
                   id="wallet"
@@ -160,26 +159,42 @@ export default {
       }, 1000)
     }
   },
+  created() {
+    const tickersData = localStorage.getItem('cryptonomicon-list')
+    if (tickersData) {
+      this.tickers = JSON.parse(tickersData)
+      this.tickers.forEach(ticker => {
+        this.subcsribeToUpdates(ticker.name)
+      })
+    }
+
+
+  },
   methods: {
+    subcsribeToUpdates(tickerName) {
+      setInterval(async () => {
+        const f = await fetch(
+            `https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=ec84f8efeadac885c129e0c70798f75f470ec257016a933fd645439542cbd8ce`
+        )
+        const data = await f.json()
+        // currentTicker.price = data.USD
+        this.tickers.find(t => t.name === tickerName).price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
+        if (this.sel?.name === tickerName) {
+          this.graph.push(data.USD)
+        }
+      }, 2000)
+      this.ticker = ""
+    },
     add() {
       const currentTicker = {
         name: this.ticker,
         price: '-'
       }
-      if (currentTicker.name && !this.checkExistsAndSimilarTickers()) {
+      if (currentTicker.name && !this.tickers.find(t => t.name.toLowerCase() === currentTicker.name.toLowerCase())) {
         this.tickers.push(currentTicker)
-        setInterval(async () => {
-          const f = await fetch(
-              `https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD&api_key=ec84f8efeadac885c129e0c70798f75f470ec257016a933fd645439542cbd8ce`
-          )
-          const data = await f.json()
-          // currentTicker.price = data.USD
-          this.tickers.find(t => t.name === currentTicker.name).price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
-          if (this.sel?.name === currentTicker.name) {
-            this.graph.push(data.USD)
-          }
-        }, 2000)
-        this.ticker = ""
+
+        localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
+        this.subcsribeToUpdates(currentTicker.name)
       }
     },
     removeItem(tickerRemove) {
@@ -189,28 +204,28 @@ export default {
       const maxV = Math.max(...this.graph)
       const minV = Math.min(...this.graph)
       return this.graph.map(price =>
-        5 + ((price - minV) / (maxV - minV) * 95)
+        10 + ((price - minV) / (maxV - minV) * 90)
       )
     },
     select(ticker) {
       this.sel = ticker
       this.graph = []
     },
-    checkExistsAndSimilarTickers() {
-      const currentTicker = {
-        name: this.ticker,
-        price: '-'
-      }
-      const alreadyExists = this.tickers.find(t => t.name.toLowerCase() === currentTicker.name.toLowerCase())
-      if (!(currentTicker.name && !alreadyExists)) {
-        const btn = document.querySelector('.my-4')
-        btn.setAttribute('disabled', 'disabled')
-        return true
-      }
-      const btn = document.querySelector('.my-4')
-      btn.removeAttribute('disabled')
-      return false
-    },
+    // checkExistsAndSimilarTickers() {
+    //   const currentTicker = {
+    //     name: this.ticker,
+    //     price: '-'
+    //   }
+    //   const alreadyExists = this.tickers.find(t => t.name.toLowerCase() === currentTicker.name.toLowerCase())
+    //   if (!(currentTicker.name && !alreadyExists)) {
+    //     const btn = document.querySelector('.my-4')
+    //     btn.setAttribute('disabled', 'disabled')
+    //     return true
+    //   }
+    //   const btn = document.querySelector('.my-4')
+    //   btn.removeAttribute('disabled')
+    //   return false
+    // },
     logCurrentSupposeTickers() {
       let arr = this.coinList.filter(coin => coin.toLowerCase().includes(this.ticker.toLowerCase()))
       if (arr.length > 4) {
@@ -220,6 +235,7 @@ export default {
     },
     clickToSuppose(s) {
       this.ticker = s
+      this.add()
     }
   }
 }
