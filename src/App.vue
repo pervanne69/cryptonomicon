@@ -80,7 +80,7 @@
             :key="t.name"
             @click="select(t)"
             :class="{
-              'border-4': sel === t
+              'border-4': selectedTicker === t
             }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
         >
@@ -113,11 +113,11 @@
             Удалить
           </button>
         </div>
+        <hr v-if="selectedTicker" class="w-full border-t border-gray-600 my-4"/>
       </div>
-      <hr v-if="sel" class="w-full border-t border-gray-600 my-4"/>
-      <section v-if="sel" class="relative">
+      <section v-if="selectedTicker" class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{ sel.name.toUpperCase() }} - USD
+          {{ selectedTicker.name.toUpperCase() }} - USD
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
@@ -127,7 +127,7 @@
               class="bg-purple-800 border w-10"></div>
         </div>
         <button
-            @click="sel = null"
+            @click="selectedTicker = null"
             type="button"
             class="absolute top-0 right-0"
         >
@@ -161,17 +161,17 @@
 
 <script>
 
-// 1. [ ]  Одинаковый код watch | Критичность 2
+// 1. [x]  Одинаковый код watch | Критичность 2
 // 2. [ ]  При удалении остается подписка на загрузку курсов / Критичность 5 - исправлено
 // 3. [ ]  Кол-во запросов | Критичность 4
 // 4. [ ]  Запросы напрямую внутри компонента (???) | Критичность 5
 // 5. [ ]  Удаление графа при отсутствии тикеров / Критичность 2 -  неисправлено
 // 6. [ ]  Обаботка ошибок API | Критичность 5 - исправлено
 // 7. [ ]  График ужасно выглядит если будет много цен / Критичность 2
-// 8. [ ]  При удалении тикера не изменяется localstorage | Критичность 4 - исправлено
+// 8. [x]  При удалении тикера не изменяется localstorage | Критичность 4 - исправлено
 // 9. [ ]  localstorage и анонимные вкладки | Критичность 3
-// 10. [ ]  Магические строки и числа (URL, 5000 миллисекунд задержки +, ключ localstorage +, кол-во на странице +) | Критичность 1 - почти исправлено
-// 11. [ ] Самое критичное - Наличие в состоянии зависимых данных / Критичность 5+
+// 10. [x]  Магические строки и числа (URL, 5000 миллисекунд задержки +, ключ localstorage +, кол-во на странице +) | Критичность 1 - почти исправлено
+// 11. [x] Самое критичное - Наличие в состоянии зависимых данных / Критичность 5+
 export default {
   name: 'App',
   data() {
@@ -179,7 +179,7 @@ export default {
       ticker: "",
       filter: "",
       tickers: [],
-      sel: null,
+      selectedTicker: null,
       graph: [],
       page: 1,
       data: {},
@@ -187,7 +187,6 @@ export default {
       keyLocalStorage: 'cryptonomicon-list',
       counterTickersOnPage: 6,
       queryInterval: 5000,
-      currentListOfSupposeCoins: [],
       coinListFunc: setTimeout(async () => {
         const f = await fetch('https://min-api.cryptocompare.com/data/top/totaltoptiervolfull?limit=100&tsym=USD&api_key=ec84f8efeadac885c129e0c70798f75f470ec257016a933fd645439542cbd8ce')
         this.data = await f.json()
@@ -248,16 +247,22 @@ export default {
           5 + ((price - minV) * 95) / (maxV - minV)
       )
     },
+    pageStateOptions() {
+      return {
+        filter: this.filter,
+        page: this.page
+      }
+    }
   },
   methods: {
-    subscribeToUpdates(tickerName) {
+    subscribeToUpdates(ct) {
       setInterval(async () => {
-        if (this.tickers.find(t => t.name === tickerName)) {
+        if (this.tickers.find(t => t.name === ct.name)) {
           const f = await fetch(
-              `https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=ec84f8efeadac885c129e0c70798f75f470ec257016a933fd645439542cbd8ce`
+              `https://min-api.cryptocompare.com/data/price?fsym=${ct.name}&tsyms=USD&api_key=ec84f8efeadac885c129e0c70798f75f470ec257016a933fd645439542cbd8ce`
           )
           const data = await f.json()
-          this.tickers.find(t => t.name === tickerName).price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
+          this.tickers.find(t => t.name === ct.name).price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
           // const tickerBTC = this.tickers.find(t => t.name === "BTC")
           // if (tickerBTC) {
           //   if (tickerBTC.price !== '-') {
@@ -267,11 +272,11 @@ export default {
           //   }
           // }
           localStorage.setItem(this.keyLocalStorage, JSON.stringify(this.tickers))
-          if (this.sel?.name === tickerName) {
+          if (this.selectedTicker?.name === ct.name) {
             this.graph.push(data.USD)
           }
         }
-      }, this.queryInterval)
+      }, 5000)
       this.ticker = ""
 
     },
@@ -281,18 +286,19 @@ export default {
         price: '-'
       }
       if (currentTicker.name && !this.tickers.find(t => t.name.toLowerCase() === currentTicker.name.toLowerCase())) {
-        this.tickers.push(currentTicker)
+        this.tickers = [...this.tickers, currentTicker]
         this.filter = ""
-        this.subscribeToUpdates(currentTicker.name)
+        this.subscribeToUpdates(currentTicker)
       }
     },
     select(ticker) {
-      this.sel = ticker
-      this.graph = []
+      this.selectedTicker = ticker
     },
     removeItem(tickerRemove) {
+      if (this.selectedTicker === tickerRemove) {
+        this.selectedTicker = null
+      }
       this.tickers = this.tickers.filter(t => t !== tickerRemove)
-      localStorage.setItem(this.keyLocalStorage, JSON.stringify(this.tickers))
     },
     logCurrentSupposeTickers() {
       let arr = this.coinList.filter(coin => coin.toLowerCase().includes(this.ticker.toLowerCase()))
@@ -307,19 +313,25 @@ export default {
     },
   },
   watch: {
+    selectedTicker() {
+      this.graph = []
+    },
+    tickers() {
+      localStorage.setItem(this.keyLocalStorage, JSON.stringify(this.tickers))
+    },
+    paginatedTickers() {
+      if (this.paginatedTickers.length === 0 && this.page > 1) {
+        this.page -= 1
+      }
+    },
     filter() {
       this.page = 1
-
-      window.history
-          .pushState(
-              null, document.title,
-              `${window.location.pathname}?filter=${this.filter}&page=${this.page}`)
     },
-    page() {
+    pageStateOptions(value) {
       window.history
           .pushState(
               null, document.title,
-              `${window.location.pathname}?filter=${this.filter}&page=${this.page}`)
+              `${window.location.pathname}?filter=${value.filter}&page=${value.page}`)
     }
   }
 }
