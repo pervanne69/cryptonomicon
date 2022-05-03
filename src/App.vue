@@ -89,7 +89,7 @@
               {{ t.name.toUpperCase() }} - USD
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900">
-              {{ t.price }}
+              {{ isNaN(t.price) ? "-" : formatPrice(parseFloat(t.price)) }}
             </dd>
           </div>
           <div class="w-full border-t border-gray-200"></div>
@@ -113,7 +113,7 @@
             Удалить
           </button>
         </div>
-        <hr v-if="selectedTicker" class="w-full border-t border-gray-600 my-4"/>
+        <!--        <hr v-if="selectedTicker" class="w-full border-t border-gray-600 my-4"/>-->
       </div>
       <section v-if="selectedTicker" class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
@@ -160,7 +160,7 @@
 
 
 <script>
-
+// [S]OLID
 // 1. [x]  Одинаковый код watch | Критичность 2
 // 2. [ ]  При удалении остается подписка на загрузку курсов / Критичность 5 - исправлено
 // 3. [ ]  Кол-во запросов | Критичность 4
@@ -172,6 +172,9 @@
 // 9. [ ]  localstorage и анонимные вкладки | Критичность 3
 // 10. [x]  Магические строки и числа (URL, 5000 миллисекунд задержки +, ключ localstorage +, кол-во на странице +) | Критичность 1 - почти исправлено
 // 11. [x] Самое критичное - Наличие в состоянии зависимых данных / Критичность 5+
+// 12. [x] Доработать реализацию функции с запросом на все криптовалюты / Критичность 5
+import {API_KEY, subscribeToTicker, unSubscribeToTicker} from "./api";
+
 export default {
   name: 'App',
   data() {
@@ -184,11 +187,12 @@ export default {
       page: 1,
       data: {},
       coinList: [],
+      isExists: false,
       keyLocalStorage: 'cryptonomicon-list',
       counterTickersOnPage: 6,
-      queryInterval: 5000,
+      queryInterval: 2000,
       coinListFunc: setTimeout(async () => {
-        const f = await fetch('https://min-api.cryptocompare.com/data/top/totaltoptiervolfull?limit=100&tsym=USD&api_key=ec84f8efeadac885c129e0c70798f75f470ec257016a933fd645439542cbd8ce')
+        const f = await fetch(`https://min-api.cryptocompare.com/data/top/totaltoptiervolfull?limit=100&tsym=USD&api_key=${API_KEY}`)
         this.data = await f.json()
         this.coinList = this.data['Data'].map(t => {
           return t['CoinInfo']['Name']
@@ -211,13 +215,13 @@ export default {
     if (tickersData) {
       this.tickers = JSON.parse(tickersData)
       this.tickers.forEach(ticker => {
-        this.subscribeToUpdates(ticker.name)
+        subscribeToTicker(ticker.name, (newPrice) => this.updateTicker(ticker.name, newPrice))
       })
     }
+    // setInterval(this.updateTickers, this.queryInterval)
   },
 
   computed: {
-
     startIndex() {
       return (this.page - 1) * this.counterTickersOnPage
     },
@@ -255,31 +259,44 @@ export default {
     }
   },
   methods: {
-    subscribeToUpdates(ct) {
-      setInterval(async () => {
-        if (this.tickers.find(t => t.name === ct.name)) {
-          const f = await fetch(
-              `https://min-api.cryptocompare.com/data/price?fsym=${ct.name}&tsyms=USD&api_key=ec84f8efeadac885c129e0c70798f75f470ec257016a933fd645439542cbd8ce`
-          )
-          const data = await f.json()
-          this.tickers.find(t => t.name === ct.name).price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
-          // const tickerBTC = this.tickers.find(t => t.name === "BTC")
-          // if (tickerBTC) {
-          //   if (tickerBTC.price !== '-') {
-          //     if (parseFloat(tickerBTC.price) > 37000) {
-          //       console.log('Цена больше 37000')
-          //     }
-          //   }
-          // }
-          localStorage.setItem(this.keyLocalStorage, JSON.stringify(this.tickers))
-          if (this.selectedTicker?.name === ct.name) {
-            this.graph.push(data.USD)
-          }
-        }
-      }, 5000)
-      this.ticker = ""
+    async updateTicker(tickerName, price) {
+      this.tickers.filter(t => t.name === tickerName).forEach(t => {
+        t.price = price
+      })
 
     },
+    formatPrice(price) {
+      return price > 1 ? price.toFixed(2) : price.toPrecision(2)
+    },
+    // async updateTickers() {
+    //   // if (!this.ticker.length) {
+    //   //   return
+    //   // }
+    //   // const exchangeData = await loadTickers(this.tickers.map(t => t.name))
+    //   // this.tickers.forEach(ticker => {
+    //   //   const price = exchangeData[ticker.name.toUpperCase()]
+    //   //
+    //   //   ticker.price = price
+    //   // })
+    //
+    //   // setInterval(async () => {
+    //   //   const exchangeData = await loadTicker(tickerName)
+    //   //   this.tickers.find(t => t.name === tickerName).price = exchangeData.USD > 1 ? exchangeData.USD.toFixed(2) : exchangeData.USD.toPrecision(2)
+    //   //   // // const tickerBTC = this.tickers.find(t => t.name === "BTC")
+    //   //   // // if (tickerBTC) {
+    //   //   // //   if (tickerBTC.price !== '-') {
+    //   //   // //     if (parseFloat(tickerBTC.price) > 37000) {
+    //   //   // //       console.log('Цена больше 37000')
+    //   //   // //     }
+    //   //   // //   }
+    //   //   // // }
+    //   //   localStorage.setItem(this.keyLocalStorage, JSON.stringify(this.tickers))
+    //   //   if (this.selectedTicker?.name === tickerName) {
+    //   //     this.graph.push(exchangeData.USD)
+    //   //   }
+    //   // }, 5000)
+    //   // this.ticker = ""
+    // },
     add() {
       const currentTicker = {
         name: this.ticker,
@@ -287,8 +304,10 @@ export default {
       }
       if (currentTicker.name && !this.tickers.find(t => t.name.toLowerCase() === currentTicker.name.toLowerCase())) {
         this.tickers = [...this.tickers, currentTicker]
+        this.ticker = ""
         this.filter = ""
-        this.subscribeToUpdates(currentTicker)
+        subscribeToTicker(currentTicker.name, newPrice =>
+            this.updateTicker(currentTicker.name, newPrice))
       }
     },
     select(ticker) {
@@ -299,6 +318,7 @@ export default {
         this.selectedTicker = null
       }
       this.tickers = this.tickers.filter(t => t !== tickerRemove)
+      unSubscribeToTicker(tickerRemove.name)
     },
     logCurrentSupposeTickers() {
       let arr = this.coinList.filter(coin => coin.toLowerCase().includes(this.ticker.toLowerCase()))
@@ -308,8 +328,18 @@ export default {
       return arr
     },
     clickToSuppose(s) {
+
+      // this.ticker = s
+      // console.log(this.ticker)
+      // console.log(this.tickers)
+      // this.add()
       this.ticker = s
-      this.add()
+      if (this.tickers.find(t => t.name.toLowerCase() === this.ticker.toLowerCase())) {
+        this.isExists = true
+      } else {
+        this.isExists = false
+        this.add()
+      }
     },
   },
   watch: {
