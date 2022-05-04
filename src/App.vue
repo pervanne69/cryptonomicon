@@ -80,11 +80,12 @@
             :key="t.name"
             @click="select(t)"
             :class="{
-              'border-4': selectedTicker === t
+              'border-4': selectedTicker === t,
+              'bg-red-300': !t.isExists,
+              'bg-white': t.isExists
 
             }"
-            class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
-            v-bind:class="{'bg-red-300': !coinList.includes(t.name)}"
+            class="overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
         >
           <div class="px-4 py-5 sm:p-6 text-center">
             <dt class="text-sm font-medium text-gray-500 truncate">
@@ -159,8 +160,6 @@
     </div>
   </div>
 </template>
-
-
 <script>
 // [S]OLID
 // 1. [x]  Одинаковый код watch | Критичность 2
@@ -192,6 +191,7 @@ export default {
       keyLocalStorage: 'cryptonomicon-list',
       counterTickersOnPage: 6,
       queryInterval: 2000,
+      countTabs: 0
     }
   },
   created() {
@@ -209,14 +209,25 @@ export default {
     if (tickersData) {
       this.tickers = JSON.parse(tickersData)
       this.tickers.forEach(ticker => {
-        subscribeToTicker(ticker.name, (newPrice) => this.updateTicker(ticker.name, newPrice))
+        subscribeToTicker(ticker.name.toUpperCase(), (newPrice) => this.updateTicker(ticker.name.toUpperCase(), newPrice))
       })
     }
   },
+  // updated() {
+  //   this.tickers.forEach(ticker => {
+  //     ticker.isExists = ticker.price === "-" ? ticker.isExists = false : ticker.isExists = true
+  //   })
+  // },
 
   computed: {
     startIndex() {
       return (this.page - 1) * this.counterTickersOnPage
+    },
+    normalizedTickers() {
+      this.tickers.forEach(ticker => {
+        ticker.isExists = ticker.price === "-" ? ticker.isExists = false : ticker.isExists = true
+      })
+      return this.tickers
     },
     endIndex() {
       return this.page * this.counterTickersOnPage
@@ -225,7 +236,6 @@ export default {
       return this.tickers.filter(t => t.name.toLowerCase().includes(this.filter.toLowerCase()))
 
     },
-
     paginatedTickers() {
       return this.filteredTickers.slice(this.startIndex, this.endIndex)
     },
@@ -267,14 +277,16 @@ export default {
     add() {
       const currentTicker = {
         name: this.ticker,
-        price: '-'
+        price: '-',
+        isExists: true
       }
       if (currentTicker.name && !this.tickers.find(t => t.name.toLowerCase() === currentTicker.name.toLowerCase())) {
+        currentTicker.name = currentTicker.name.toUpperCase()
         this.tickers = [...this.tickers, currentTicker]
         this.ticker = ""
         this.filter = ""
-        subscribeToTicker(currentTicker.name, newPrice =>
-            this.updateTicker(currentTicker.name, newPrice))
+        subscribeToTicker(currentTicker.name.toUpperCase(), newPrice =>
+            this.updateTicker(currentTicker.name.toUpperCase(), newPrice))
       }
     },
     select(ticker) {
@@ -285,7 +297,8 @@ export default {
         this.selectedTicker = null
       }
       this.tickers = this.tickers.filter(t => t !== tickerRemove)
-      unSubscribeFromTicker(tickerRemove.name)
+      localStorage.setItem(this.keyLocalStorage, JSON.stringify(this.tickers))
+      unSubscribeFromTicker(tickerRemove.name.toUpperCase())
     },
     logCurrentSupposeTickers() {
       let arr = this.coinList.filter(coin => coin.toLowerCase().includes(this.ticker.toLowerCase()))
@@ -308,7 +321,8 @@ export default {
     selectedTicker() {
       this.graph = []
     },
-    tickers() {
+    normalizedTickers() {
+      this.tickers = this.normalizedTickers
       localStorage.setItem(this.keyLocalStorage, JSON.stringify(this.tickers))
     },
     paginatedTickers() {
@@ -328,4 +342,3 @@ export default {
   }
 }
 </script>
-
