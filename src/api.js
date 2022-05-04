@@ -1,6 +1,12 @@
-
-
 export const API_KEY = 'ec84f8efeadac885c129e0c70798f75f470ec257016a933fd645439542cbd8ce'
+
+export let coinList = []
+
+fetch(`https://min-api.cryptocompare.com/data/top/totaltoptiervolfull?limit=100&tsym=USD&api_key=${API_KEY}`)
+    .then(response => response.json())
+    .then(json => json['Data'].map(t => {
+        coinList.push(t['CoinInfo']['Name'])
+    }))
 
 const tickersHandlers = new Map()
 
@@ -62,4 +68,3 @@ export const unSubscribeFromTicker = ticker => {
     tickersHandlers.delete(ticker)
     unsubscribeFromTickerOnWebSocket(ticker)
 }
-

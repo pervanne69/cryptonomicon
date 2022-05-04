@@ -5,7 +5,7 @@
         <div class="flex">
           <div class="max-w-xs">
             <label for="wallet" class="block text-sm font-medium text-gray-700"
-            >Тикер {{ ticker }}</label
+            >Тикер</label
 
             >
             <div class="mt-1 relative rounded-md shadow-md">
@@ -16,7 +16,7 @@
                   name="wallet"
                   id="wallet"
                   class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
-                  placeholder="Например DOGE"
+                  placeholder="Например BTC"
               />
             </div>
             <div style="display: flex;">
@@ -81,15 +81,17 @@
             @click="select(t)"
             :class="{
               'border-4': selectedTicker === t
+
             }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
+            v-bind:class="{'bg-red-300': !coinList.includes(t.name)}"
         >
           <div class="px-4 py-5 sm:p-6 text-center">
             <dt class="text-sm font-medium text-gray-500 truncate">
               {{ t.name.toUpperCase() }} - USD
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900">
-              {{ isNaN(t.price) ? "-" : formatPrice(parseFloat(t.price)) }}
+              {{ t.price !== "-" ? formatPrice(t.price) : "-" }}
             </dd>
           </div>
           <div class="w-full border-t border-gray-200"></div>
@@ -113,8 +115,8 @@
             Удалить
           </button>
         </div>
-        <!--        <hr v-if="selectedTicker" class="w-full border-t border-gray-600 my-4"/>-->
       </div>
+      <hr v-if="selectedTicker" class="w-full border-t border-gray-600 my-4"/>
       <section v-if="selectedTicker" class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
           {{ selectedTicker.name.toUpperCase() }} - USD
@@ -173,7 +175,7 @@
 // 10. [x]  Магические строки и числа (URL, 5000 миллисекунд задержки +, ключ localstorage +, кол-во на странице +) | Критичность 1 - почти исправлено
 // 11. [x] Самое критичное - Наличие в состоянии зависимых данных / Критичность 5+
 // 12. [x] Доработать реализацию функции с запросом на все криптовалюты / Критичность 5
-import {API_KEY, subscribeToTicker, unSubscribeFromTicker} from "./api";
+import {subscribeToTicker, unSubscribeFromTicker, coinList} from "./api";
 
 export default {
   name: 'App',
@@ -185,19 +187,11 @@ export default {
       selectedTicker: null,
       graph: [],
       page: 1,
-      data: {},
-      coinList: [],
+      coinList,
       isExists: false,
       keyLocalStorage: 'cryptonomicon-list',
       counterTickersOnPage: 6,
       queryInterval: 2000,
-      coinListFunc: setTimeout(async () => {
-        const f = await fetch(`https://min-api.cryptocompare.com/data/top/totaltoptiervolfull?limit=100&tsym=USD&api_key=${API_KEY}`)
-        this.data = await f.json()
-        this.coinList = this.data['Data'].map(t => {
-          return t['CoinInfo']['Name']
-        })
-      }, 1000)
     }
   },
   created() {
@@ -264,8 +258,8 @@ export default {
           this.graph.push(price)
         }
         t.price = price
+        localStorage.setItem(this.keyLocalStorage, JSON.stringify(this.tickers))
       })
-
     },
     formatPrice(price) {
       return price > 1 ? price.toFixed(2) : price.toPrecision(2)
