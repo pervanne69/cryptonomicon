@@ -1,37 +1,65 @@
+
+
 export const API_KEY = 'ec84f8efeadac885c129e0c70798f75f470ec257016a933fd645439542cbd8ce'
 
 const tickersHandlers = new Map()
 
-//TODO: refactor to use URLSearchParams
-const loadTickers = () => {
-    if (!tickersHandlers.size) {
+const AGGREGATE_INDEX = "5"
+
+const socket = new WebSocket(
+    `wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`
+)
+
+socket.addEventListener('message', e => {
+    const {TYPE: type, FROMSYMBOL: currency, PRICE: newPrice} = JSON.parse(e.data)
+    if (type !== AGGREGATE_INDEX || newPrice === undefined) {
         return
     }
-    return fetch(
-        `https://min-api.cryptocompare.com/data/pricemulti?fsyms=${[...tickersHandlers.keys()].join(',')}&tsyms=USD&api_key=${API_KEY}`
-    ).then(r => r.json()).then(rawData => {
-        const updatedPrices = Object.fromEntries(
-            Object.entries(rawData).map(([key, value]) => [key, value.USD]))
-        Object.entries(updatedPrices).forEach(([currency, newPrice]) => {
-            const handlers = tickersHandlers.get(currency) ?? []
-            handlers.forEach(fn => fn(newPrice))
-        })
-    })
+    const handlers = tickersHandlers.get(currency) ?? []
+    handlers.forEach(fn => fn(newPrice))
+
+
+})
+
+function sendToWebSocket(message) {
+    const stringifiedMessage = JSON.stringify(message)
+    if (socket.readyState === WebSocket.OPEN) {
+        socket.send(stringifiedMessage)
+        return
+    }
+    socket.addEventListener('open', () => {
+        socket.send(stringifiedMessage)
+    }, {once: true})
 }
 
+
+function subscribeToTickerOnWebSocket(ticker) {
+    sendToWebSocket(
+        {
+            "action": "SubAdd",
+            "subs": [`5~CCCAGG~${ticker}~USD`]
+        }
+    )
+}
+
+function unsubscribeFromTickerOnWebSocket(ticker) {
+    sendToWebSocket(
+        {
+            "action": "SubRemove",
+            "subs": [`5~CCCAGG~${ticker}~USD`]
+        }
+    )
+}
 
 export const subscribeToTicker = (ticker, cb) => {
     const subscribers = tickersHandlers.get(ticker) || []
     tickersHandlers.set(ticker, [...subscribers, cb])
+    subscribeToTickerOnWebSocket(ticker)
+
 }
 
-export const unSubscribeToTicker = ticker => {
+export const unSubscribeFromTicker = ticker => {
     tickersHandlers.delete(ticker)
+    unsubscribeFromTickerOnWebSocket(ticker)
 }
-
-setInterval(loadTickers, 5000)
-
-window.tickers = tickersHandlers
-// Получить стоимость криптовалютных пар с API?
-// получать обновления стоимости криптовалютных пра с api
 

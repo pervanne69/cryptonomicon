@@ -173,7 +173,7 @@
 // 10. [x]  Магические строки и числа (URL, 5000 миллисекунд задержки +, ключ localstorage +, кол-во на странице +) | Критичность 1 - почти исправлено
 // 11. [x] Самое критичное - Наличие в состоянии зависимых данных / Критичность 5+
 // 12. [x] Доработать реализацию функции с запросом на все криптовалюты / Критичность 5
-import {API_KEY, subscribeToTicker, unSubscribeToTicker} from "./api";
+import {API_KEY, subscribeToTicker, unSubscribeFromTicker} from "./api";
 
 export default {
   name: 'App',
@@ -218,7 +218,6 @@ export default {
         subscribeToTicker(ticker.name, (newPrice) => this.updateTicker(ticker.name, newPrice))
       })
     }
-    // setInterval(this.updateTickers, this.queryInterval)
   },
 
   computed: {
@@ -261,6 +260,9 @@ export default {
   methods: {
     async updateTicker(tickerName, price) {
       this.tickers.filter(t => t.name === tickerName).forEach(t => {
+        if (t === this.selectedTicker) {
+          this.graph.push(price)
+        }
         t.price = price
       })
 
@@ -268,35 +270,6 @@ export default {
     formatPrice(price) {
       return price > 1 ? price.toFixed(2) : price.toPrecision(2)
     },
-    // async updateTickers() {
-    //   // if (!this.ticker.length) {
-    //   //   return
-    //   // }
-    //   // const exchangeData = await loadTickers(this.tickers.map(t => t.name))
-    //   // this.tickers.forEach(ticker => {
-    //   //   const price = exchangeData[ticker.name.toUpperCase()]
-    //   //
-    //   //   ticker.price = price
-    //   // })
-    //
-    //   // setInterval(async () => {
-    //   //   const exchangeData = await loadTicker(tickerName)
-    //   //   this.tickers.find(t => t.name === tickerName).price = exchangeData.USD > 1 ? exchangeData.USD.toFixed(2) : exchangeData.USD.toPrecision(2)
-    //   //   // // const tickerBTC = this.tickers.find(t => t.name === "BTC")
-    //   //   // // if (tickerBTC) {
-    //   //   // //   if (tickerBTC.price !== '-') {
-    //   //   // //     if (parseFloat(tickerBTC.price) > 37000) {
-    //   //   // //       console.log('Цена больше 37000')
-    //   //   // //     }
-    //   //   // //   }
-    //   //   // // }
-    //   //   localStorage.setItem(this.keyLocalStorage, JSON.stringify(this.tickers))
-    //   //   if (this.selectedTicker?.name === tickerName) {
-    //   //     this.graph.push(exchangeData.USD)
-    //   //   }
-    //   // }, 5000)
-    //   // this.ticker = ""
-    // },
     add() {
       const currentTicker = {
         name: this.ticker,
@@ -318,7 +291,7 @@ export default {
         this.selectedTicker = null
       }
       this.tickers = this.tickers.filter(t => t !== tickerRemove)
-      unSubscribeToTicker(tickerRemove.name)
+      unSubscribeFromTicker(tickerRemove.name)
     },
     logCurrentSupposeTickers() {
       let arr = this.coinList.filter(coin => coin.toLowerCase().includes(this.ticker.toLowerCase()))
@@ -328,11 +301,6 @@ export default {
       return arr
     },
     clickToSuppose(s) {
-
-      // this.ticker = s
-      // console.log(this.ticker)
-      // console.log(this.tickers)
-      // this.add()
       this.ticker = s
       if (this.tickers.find(t => t.name.toLowerCase() === this.ticker.toLowerCase())) {
         this.isExists = true
