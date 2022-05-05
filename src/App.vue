@@ -89,7 +89,7 @@
         >
           <div class="px-4 py-5 sm:p-6 text-center">
             <dt class="text-sm font-medium text-gray-500 truncate">
-              {{ t.name.toUpperCase() }} - USD
+              {{ t.name.toUpperCase() }} - {{ t.rate }}
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900">
               {{ t.price !== "-" ? formatPrice(t.price) : "-" }}
@@ -209,7 +209,13 @@ export default {
     if (tickersData) {
       this.tickers = JSON.parse(tickersData)
       this.tickers.forEach(ticker => {
-        subscribeToTicker(ticker.name.toUpperCase(), (newPrice) => this.updateTicker(ticker.name.toUpperCase(), newPrice))
+        subscribeToTicker(ticker.name.toUpperCase(), (newPrice) => this.updateTicker(ticker.name.toUpperCase(), newPrice), "USD")
+        ticker.rate = "USD"
+        if (ticker.isExists === false) {
+          unSubscribeFromTicker(ticker.name.toUpperCase(), "USD")
+          subscribeToTicker(ticker.name.toUpperCase(), (newPrice) => this.updateTicker(ticker.name.toUpperCase(), newPrice), "BTC")
+          ticker.rate = "BTC"
+        }
       })
     }
   },
@@ -278,15 +284,21 @@ export default {
       const currentTicker = {
         name: this.ticker,
         price: '-',
-        isExists: true
+        isExists: false,
       }
       if (currentTicker.name && !this.tickers.find(t => t.name.toLowerCase() === currentTicker.name.toLowerCase())) {
         currentTicker.name = currentTicker.name.toUpperCase()
         this.tickers = [...this.tickers, currentTicker]
         this.ticker = ""
         this.filter = ""
-        subscribeToTicker(currentTicker.name.toUpperCase(), newPrice =>
-            this.updateTicker(currentTicker.name.toUpperCase(), newPrice))
+        subscribeToTicker(currentTicker.name.toUpperCase(), newPrice => {
+          this.updateTicker(currentTicker.name.toUpperCase(), newPrice, "USD")
+          if (currentTicker.isExists === false) {
+            unSubscribeFromTicker(currentTicker.name.toUpperCase(), "USD")
+            subscribeToTicker(currentTicker.name.toUpperCase(), (newPrice) => this.updateTicker(currentTicker.name.toUpperCase(), newPrice), "BTC")
+            currentTicker.rate = "BTC"
+          }
+        }, currentTicker.rate)
       }
     },
     select(ticker) {

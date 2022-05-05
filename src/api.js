@@ -15,8 +15,6 @@ const tickersHandlers = new Map()
 
 const AGGREGATE_INDEX = "5"
 
-let rate = "USD"
-
 const socket = new WebSocket(
     `wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`
 )
@@ -28,27 +26,24 @@ socket.addEventListener('message', e => {
     }
     const handlers = tickersHandlers.get(currency) ?? []
     handlers.forEach(fn => fn(newPrice))
-
 })
 
 
-function crossCryptoCourseOptimizer() {
-    socket.onmessage = e => {
-        const {TYPE: type, MESSAGE: message} = JSON.parse(e.data)
-        if (type === "500" && message === "INVALID_SUB") {
-            const {PARAMETER: parameter} = JSON.parse(e.data)
-            const arrayedParameter = parameter.toString().split('~')
-            console.log(arrayedParameter)
-            if (arrayedParameter[3] === "BTC") {
-                rate = "USD"
-            } else {
-                rate = "BTC"
-            }
-        }
-    }
-    console.log(rate)
-    return rate
-}
+// function crossCryptoCourseOptimizer() {
+//     socket.onmessage = e => {
+//         const {TYPE: type, MESSAGE: message} = JSON.parse(e.data)
+//         if (type === "500" && message === "INVALID_SUB") {
+//             const {PARAMETER: parameter} = JSON.parse(e.data)
+//             const arrayedParameter = parameter.toString().split('~')
+//             if (arrayedParameter[3] === "BTC") {
+//                 rate = "USD"
+//             } else if (arrayedParameter[3] === "USD") {
+//                 rate = "BTC"
+//             }
+//         }
+//     }
+//     return rate
+// }
 
 
 
@@ -64,32 +59,32 @@ function sendToWebSocket(message) {
 }
 
 
-function subscribeToTickerOnWebSocket(ticker, val) {
+function subscribeToTickerOnWebSocket(ticker, rate) {
     sendToWebSocket(
         {
             "action": "SubAdd",
-            "subs": [`5~CCCAGG~${ticker.toUpperCase()}~${val}`]
+            "subs": [`5~CCCAGG~${ticker.toUpperCase()}~${rate}`]
         }
     )
 }
 
-function unsubscribeFromTickerOnWebSocket(ticker, val) {
+function unsubscribeFromTickerOnWebSocket(ticker, rate) {
     sendToWebSocket(
         {
             "action": "SubRemove",
-            "subs": [`5~CCCAGG~${ticker.toUpperCase()}~${val}`]
+            "subs": [`5~CCCAGG~${ticker.toUpperCase()}~${rate}`]
         }
     )
 }
 
-export const subscribeToTicker = (ticker, cb) => {
+export const subscribeToTicker = (ticker, cb, rate) => {
     const subscribers = tickersHandlers.get(ticker.toUpperCase()) || []
     tickersHandlers.set(ticker.toUpperCase(), [...subscribers, cb])
-    subscribeToTickerOnWebSocket(ticker.toUpperCase(), crossCryptoCourseOptimizer())
+    subscribeToTickerOnWebSocket(ticker.toUpperCase(), rate)
 
 }
 
-export const unSubscribeFromTicker = ticker => {
+export const unSubscribeFromTicker = (ticker, rate) => {
     tickersHandlers.delete(ticker)
-    unsubscribeFromTickerOnWebSocket(ticker.toUpperCase(), crossCryptoCourseOptimizer())
+    unsubscribeFromTickerOnWebSocket(ticker.toUpperCase(), rate)
 }
