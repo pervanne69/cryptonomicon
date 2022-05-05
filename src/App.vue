@@ -120,7 +120,7 @@
       <hr v-if="selectedTicker" class="w-full border-t border-gray-600 my-4"/>
       <section v-if="selectedTicker" class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{ selectedTicker.name.toUpperCase() }} - USD
+          {{ selectedTicker.name.toUpperCase() }} - {{ selectedTicker.rate }}
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
@@ -189,6 +189,7 @@ export default {
       coinList,
       isExists: false,
       keyLocalStorage: 'cryptonomicon-list',
+      coinsCrossOptimizers: ["USD", "EUR", "BTC", "ETH", "DOGE", "LTC", "XMR", "NXT", "UNO", "DOTC", "FTC", "POP", "XBR", "BCH", "USDT"],
       counterTickersOnPage: 6,
       queryInterval: 2000,
       countTabs: 0
@@ -210,12 +211,12 @@ export default {
       this.tickers = JSON.parse(tickersData)
       this.tickers.forEach(ticker => {
         subscribeToTicker(ticker.name.toUpperCase(), (newPrice) => this.updateTicker(ticker.name.toUpperCase(), newPrice), "USD")
-        ticker.rate = "USD"
-        if (ticker.isExists === false) {
-          unSubscribeFromTicker(ticker.name.toUpperCase(), "USD")
-          subscribeToTicker(ticker.name.toUpperCase(), (newPrice) => this.updateTicker(ticker.name.toUpperCase(), newPrice), "BTC")
-          ticker.rate = "BTC"
-        }
+        // ticker.rate = "USD"
+        // if (ticker.isExists === false) {
+        //   unSubscribeFromTicker(ticker.name.toUpperCase(), "USD")
+        //   subscribeToTicker(ticker.name.toUpperCase(), (newPrice) => this.updateTicker(ticker.name.toUpperCase(), newPrice), "BTC")
+        //   ticker.rate = "BTC"
+        // }
       })
     }
   },
@@ -292,13 +293,18 @@ export default {
         this.ticker = ""
         this.filter = ""
         subscribeToTicker(currentTicker.name.toUpperCase(), newPrice => {
-          this.updateTicker(currentTicker.name.toUpperCase(), newPrice, "USD")
-          if (currentTicker.isExists === false) {
-            unSubscribeFromTicker(currentTicker.name.toUpperCase(), "USD")
-            subscribeToTicker(currentTicker.name.toUpperCase(), (newPrice) => this.updateTicker(currentTicker.name.toUpperCase(), newPrice), "BTC")
-            currentTicker.rate = "BTC"
-          }
-        }, currentTicker.rate)
+          this.updateTicker(currentTicker.name.toUpperCase(), newPrice, this.coinsCrossOptimizers[0])
+        })
+        currentTicker.rate = this.coinsCrossOptimizers[0]
+        if (currentTicker.isExists === false) {
+          setTimeout(() => {
+            for (let coin of this.coinsCrossOptimizers.slice(1,)) {
+              currentTicker.rate = coin
+              unSubscribeFromTicker(currentTicker.name.toUpperCase(), currentTicker.rate)
+              subscribeToTicker(currentTicker.name.toUpperCase(), (newPrice) => this.updateTicker(currentTicker.name.toUpperCase(), newPrice), currentTicker.rate)
+            }
+          }, 2000)
+        }
       }
     },
     select(ticker) {
