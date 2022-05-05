@@ -4,6 +4,24 @@ export const API_KEY = 'ec84f8efeadac885c129e0c70798f75f470ec257016a933fd6454395
 
 export let coinList = []
 
+// const coinsCrossOptimizersList = ["USDT", "BTC", "USD", "ETH"]
+//
+// function coinsCrossOptimizerFunc(ticker) {
+//     ticker.rate = coinsCrossOptimizersList[ticker.coinIndex]
+//     setInterval(() => {
+//         if (ticker.isExists === false) {
+//             unSubscribeFromTicker(ticker.name.toUpperCase(),ticker.rate)
+//             ticker.coinIndex = currentTicker.coinIndex += 1
+//             currentTicker.rate = this.coinsCrossOptimizers[currentTicker.coinIndex]
+//             subscribeToTicker(currentTicker.name.toUpperCase(), (newPrice) => this.updateTicker(currentTicker.name.toUpperCase(), newPrice), currentTicker.rate)
+//             if (currentTicker.isExists === true) {
+//                 return
+//             }
+//         }
+//     }, 2000)
+// }
+
+
 
 fetch(`https://min-api.cryptocompare.com/data/top/totaltoptiervolfull?limit=100&tsym=USD&api_key=${API_KEY}`)
     .then(response => response.json())
