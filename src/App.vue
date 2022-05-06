@@ -129,8 +129,11 @@
           <div
               v-for="(bar, idx) in normalizedGraph"
               :key="idx"
-              :style="{height: `${bar}%`}"
-              class="bg-purple-800 border w-10"></div>
+              ref="graphElement"
+              :style="{height: `${bar}%`, width: `${graphElementWidth}px`}"
+              class="bg-purple-800 border"
+          >
+          </div>
         </div>
         <button
             @click="selectedTicker = null"
@@ -166,21 +169,21 @@
 <script>
 // [S]OLID
 // 1. [x]  Одинаковый код watch | Критичность 2
-// 2. [ ]  При удалении остается подписка на загрузку курсов / Критичность 5 - исправлено
-// 3. [ ]  Кол-во запросов | Критичность 4
-// 4. [ ]  Запросы напрямую внутри компонента (???) | Критичность 5
-// 5. [ ]  Удаление графа при отсутствии тикеров / Критичность 2 -  неисправлено
-// 6. [ ]  Обаботка ошибок API | Критичность 5 - исправлено
-// 7. [ ]  График ужасно выглядит если будет много цен / Критичность 2
+// 2. [x]  При удалении остается подписка на загрузку курсов / Критичность 5 - исправлено
+// 3. [x]  Кол-во запросов | Критичность 4
+// 4. [x]  Запросы напрямую внутри компонента (???) | Критичность 5
+// 5. [x]  Удаление графа при отсутствии тикеров / Критичность 2 -  неисправлено
+// 6. [x]  Обаботка ошибок API | Критичность 5 - исправлено
+// 7. [x]  График ужасно выглядит если будет много цен / Критичность 2
 // 8. [x]  При удалении тикера не изменяется localstorage | Критичность 4 - исправлено
 // 9. [ ]  localstorage и анонимные вкладки | Критичность 3
 // 10. [x]  Магические строки и числа (URL, 5000 миллисекунд задержки +, ключ localstorage +, кол-во на странице +) | Критичность 1 - почти исправлено
 // 11. [x] Самое критичное - Наличие в состоянии зависимых данных / Критичность 5+
 // 12. [x] Доработать реализацию функции с запросом на все криптовалюты / Критичность 5
 import {subscribeToTicker, unSubscribeFromTicker, coinList} from "./api";
-
 export default {
   name: 'App',
+
   data() {
     return {
       ticker: "",
@@ -191,11 +194,11 @@ export default {
       page: 1,
       coinList,
       maxGraphElements: 1,
+      graphElementWidth: 38,
       isExists: false,
       keyLocalStorage: 'cryptonomicon-list',
       counterTickersOnPage: 6,
       queryInterval: 2000,
-      countTabs: 0
     }
   },
   created() {
@@ -213,14 +216,12 @@ export default {
     if (tickersData) {
       this.tickers = JSON.parse(tickersData)
       this.tickers.forEach(ticker => {
-        console.log(ticker)
         if (ticker.isExists === false) {
           subscribeToTicker(ticker.name.toUpperCase(), (newPrice) => this.updateTicker(ticker.name.toUpperCase(), newPrice), "USDT")
           ticker.rate = "USDT"
         } else {
           subscribeToTicker(ticker.name.toUpperCase(), (newPrice) => this.updateTicker(ticker.name.toUpperCase(), newPrice), ticker.rate)
         }
-
       })
     }
   },
@@ -232,6 +233,7 @@ export default {
 
   mounted() {
     window.addEventListener('resize', this.calculateMaxGraphElements)
+
   },
   beforeMount() {
     window.removeEventListener('resize', this.calculateMaxGraphElements)
@@ -283,7 +285,7 @@ export default {
       if (!this.$refs.graph) {
         return
       }
-      this.maxGraphElements = this.$refs.graph.clientWidth / 38
+      this.maxGraphElements = this.$refs.graph.clientWidth / this.graphElementWidth
     },
     async updateTicker(tickerName, price) {
       this.tickers
@@ -291,7 +293,7 @@ export default {
           .forEach(t => {
             if (t === this.selectedTicker) {
               this.graph.push(price)
-              if (this.graph.length > this.maxGraphElements) {
+              while (this.graph.length > this.maxGraphElements) {
                 this.graph.shift()
               }
             }
@@ -338,6 +340,9 @@ export default {
     },
     select(ticker) {
       this.selectedTicker = ticker
+      this.$nextTick(() => {
+        this.calculateMaxGraphElements()
+      })
     },
     removeItem(tickerRemove) {
       if (this.selectedTicker === tickerRemove) {
@@ -367,6 +372,8 @@ export default {
   watch: {
     selectedTicker() {
       this.graph = []
+      this.$nextTick().then(this.calculateMaxGraphElements)
+
     },
     normalizedTickers() {
       this.tickers = this.normalizedTickers
