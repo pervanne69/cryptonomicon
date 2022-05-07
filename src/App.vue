@@ -1,61 +1,7 @@
 <template>
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
     <div class="container">
-      <section>
-        <div class="flex">
-          <div class="max-w-xs">
-            <label for="wallet" class="block text-sm font-medium text-gray-700"
-            >Тикер</label
-
-            >
-            <div class="mt-1 relative rounded-md shadow-md">
-              <input
-                  v-model="ticker"
-                  @keydown.enter="add"
-                  type="text"
-                  name="wallet"
-                  id="wallet"
-                  class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
-                  placeholder="Например BTC"
-              />
-            </div>
-            <div style="display: flex;">
-              <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
-                   v-for="sup of logCurrentSupposeTickers()">
-                <span
-                    class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer"
-                    @click="clickToSuppose(sup)"
-                >
-                  {{ sup }}
-                </span>
-              </div>
-            </div>
-            <div class="text-sm text-red-600" v-if="tickers.find(t => t.name.toLowerCase() === ticker.toLowerCase())">
-              Такой тикер уже добавлен
-            </div>
-          </div>
-        </div>
-        <button
-            @click="add"
-            type="button"
-            class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-        >
-          <!-- Heroicon name: solid/mail -->
-          <svg
-              class="-ml-0.5 mr-2 h-6 w-6"
-              xmlns="http://www.w3.org/2000/svg"
-              width="30"
-              height="30"
-              viewBox="0 0 24 24"
-              fill="#ffffff"
-          >
-            <path
-                d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4V7zm-1-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
-            ></path>
-          </svg>
-          Добавить
-        </button>
-      </section>
+      <add-ticker @add-ticker="add" />
       <div>
         <hr v-if="tickers.length" class="w-full border-t border-gray-600 my-1"/>
         <button
@@ -71,7 +17,6 @@
         >Назад
         </button>
         <div>Фильтрация <input v-model="filter"/></div>
-        {{ filter }}
       </div>
       <hr v-if="tickers.length" class="w-full border-t border-gray-600 my-4"/>
       <div class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -142,8 +87,6 @@
         >
           <svg
               xmlns="http://www.w3.org/2000/svg"
-              xmlns:xlink="http://www.w3.org/1999/xlink"
-              xmlns:svgjs="http://svgjs.com/svgjs"
               version="1.1"
               width="30"
               height="30"
@@ -180,22 +123,24 @@
 // 10. [x]  Магические строки и числа (URL, 5000 миллисекунд задержки +, ключ localstorage +, кол-во на странице +) | Критичность 1 - почти исправлено
 // 11. [x] Самое критичное - Наличие в состоянии зависимых данных / Критичность 5+
 // 12. [x] Доработать реализацию функции с запросом на все криптовалюты / Критичность 5
-import {subscribeToTicker, unSubscribeFromTicker, coinList} from "./api";
+import {subscribeToTicker, unSubscribeFromTicker} from "./api";
+import AddTicker from "./components/AddTicker";
 export default {
   name: 'App',
-
+  components: {
+    AddTicker,
+  },
   data() {
     return {
-      ticker: "",
-      filter: "",
       tickers: [],
+      currentLocalStorageListValue: [],
+      filter: "",
       selectedTicker: null,
       graph: [],
       page: 1,
-      coinList,
+      isExists: false,
       maxGraphElements: 1,
       graphElementWidth: 38,
-      isExists: false,
       keyLocalStorage: 'cryptonomicon-list',
       counterTickersOnPage: 6,
       queryInterval: 2000,
@@ -233,7 +178,6 @@ export default {
 
   mounted() {
     window.addEventListener('resize', this.calculateMaxGraphElements)
-
   },
   beforeMount() {
     window.removeEventListener('resize', this.calculateMaxGraphElements)
@@ -278,7 +222,7 @@ export default {
         filter: this.filter,
         page: this.page
       }
-    }
+    },
   },
   methods: {
     calculateMaxGraphElements() {
@@ -304,16 +248,15 @@ export default {
     formatPrice(price) {
       return price > 1 ? price.toFixed(2) : price.toPrecision(2)
     },
-    add() {
+    add(ticker) {
       const currentTicker = {
-        name: this.ticker,
+        name: ticker,
         price: '-',
         isExists: false,
       }
       if (currentTicker.name && !this.tickers.find(t => t.name.toLowerCase() === currentTicker.name.toLowerCase())) {
         currentTicker.name = currentTicker.name.toUpperCase()
         this.tickers = [...this.tickers, currentTicker]
-        this.ticker = ""
         this.filter = ""
         if (currentTicker.isExists === false) {
           subscribeToTicker(currentTicker.name.toUpperCase(), (newPrice) => this.updateTicker(currentTicker.name.toUpperCase(), newPrice), "USD")
@@ -352,24 +295,11 @@ export default {
       localStorage.setItem(this.keyLocalStorage, JSON.stringify(this.tickers))
       unSubscribeFromTicker(tickerRemove.name.toUpperCase(), tickerRemove.rate)
     },
-    logCurrentSupposeTickers() {
-      let arr = this.coinList.filter(coin => coin.toLowerCase().includes(this.ticker.toLowerCase()))
-      if (arr.length > 4) {
-        arr = arr.slice(0, 4)
-      }
-      return arr
-    },
-    clickToSuppose(s) {
-      this.ticker = s
-      if (this.tickers.find(t => t.name.toLowerCase() === this.ticker.toLowerCase())) {
-        this.isExists = true
-      } else {
-        this.isExists = false
-        this.add()
-      }
-    },
   },
   watch: {
+    ticker() {
+      this.isExists = !!this.tickers.find(t => t.name.toLowerCase() === this.ticker.toLowerCase());
+    },
     selectedTicker() {
       this.graph = []
       this.$nextTick().then(this.calculateMaxGraphElements)

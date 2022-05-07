@@ -1,4 +1,3 @@
-import Log from "tailwindcss/lib/util/log";
 
 export const API_KEY = 'ec84f8efeadac885c129e0c70798f75f470ec257016a933fd645439542cbd8ce'
 
@@ -38,7 +37,7 @@ const socket = new WebSocket(
 )
 
 socket.addEventListener('message', e => {
-    const {TYPE: type, FROMSYMBOL: currency, PRICE: newPrice, MESSAGE: message} = JSON.parse(e.data)
+    const {TYPE: type, FROMSYMBOL: currency, PRICE: newPrice} = JSON.parse(e.data)
     if (type !== AGGREGATE_INDEX || newPrice === undefined) {
         return
     }
