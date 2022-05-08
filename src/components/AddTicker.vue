@@ -48,6 +48,7 @@ export default {
       ticker: '',
       coinList,
       keyLocalStorage: 'cryptonomicon-list',
+      indexSupposeTicker: 0
     }
   },
   props: {
@@ -55,6 +56,11 @@ export default {
       type: Boolean,
       required: false,
       default: false
+    }
+  },
+  emits: {
+    "add-ticker": value => {
+      return typeof value === "string" && value.length <= 5
     }
   },
   computed: {
