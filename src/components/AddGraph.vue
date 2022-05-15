@@ -12,7 +12,6 @@
         <div
             v-for="(bar, idx) in normalizedGraph"
             :key="idx"
-            ref="graphElement"
             :style="{height: `${bar}%`, width: `${graphElementWidth}px`}"
             class="bg-purple-800 border"
         >
@@ -35,6 +34,7 @@ export default {
   },
   emits: {
     deleteGraph: null,
+    calcMaxGraphElements: null,
   },
   props: {
     selectedTicker: {
@@ -49,6 +49,12 @@ export default {
       required: true
     },
   },
+  mounted() {
+    window.addEventListener('resize', this.calculateMaxGraphElements)
+  },
+  beforeMount() {
+    window.removeEventListener('resize', this.calculateMaxGraphElements)
+  },
   computed: {
     normalizedGraph() {
       const maxV = Math.max(...this.graph)
@@ -61,5 +67,12 @@ export default {
       )
     }
   },
+  methods: {
+    calculateMaxGraphElements() {
+      if (this.$refs.graphItem) {
+        this.$emit('calcMaxGraphElements', this.$refs.graphItem)
+      }
+    }
+  }
 }
 </script>
