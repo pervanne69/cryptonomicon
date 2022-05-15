@@ -67,7 +67,6 @@
           :selectedTicker="selectedTicker"
           :graph="graph"
           :maxGraphElements="maxGraphElements">
-        {{maxGraphElements}}
       </add-graph>
     </div>
   </div>
