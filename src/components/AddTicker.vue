@@ -30,7 +30,7 @@
         </div>
       </div>
     </div>
-    <add-button @click="add" :disabled="tickerExists" />
+    <add-button @add-ticker="add" :disabled="tickerExists" />
   </section>
 </template>
 
@@ -47,8 +47,6 @@ export default {
     return {
       ticker: '',
       coinList,
-      keyLocalStorage: 'cryptonomicon-list',
-      indexSupposeTicker: 0
     }
   },
   props: {
@@ -56,6 +54,10 @@ export default {
       type: Boolean,
       required: false,
       default: false
+    },
+    tickers: {
+      type: Array,
+      required: true
     }
   },
   emits: {
@@ -68,7 +70,7 @@ export default {
       if (!this.ticker) {
         return false
       } else {
-        return !!JSON.parse(localStorage.getItem(this.keyLocalStorage)).find(t => t.name.toLowerCase() === this.ticker.toLowerCase());
+        return !!this.tickers.find(t => t.name.toLowerCase() === this.ticker.toLowerCase());
 
       }
     }
@@ -81,7 +83,7 @@ export default {
         isExists: false,
       }
       this.$emit('add-ticker', this.ticker)
-      if (currentTicker.name && !JSON.parse(localStorage.getItem(this.keyLocalStorage)).find(t => t.name.toLowerCase() === currentTicker.name.toLowerCase())) {
+      if (currentTicker.name && !this.tickers.find(t => t.name.toLowerCase() === currentTicker.name.toLowerCase())) {
         this.ticker = ""
       }
     },
@@ -94,7 +96,7 @@ export default {
     },
     clickToSuppose(s) {
       this.ticker = s
-      if (!JSON.parse(localStorage.getItem(this.keyLocalStorage)).find(t => t.name.toLowerCase() === this.ticker.toLowerCase())) {
+      if (!this.tickers.find(t => t.name.toLowerCase() === this.ticker.toLowerCase())) {
         this.add()
       }
     },

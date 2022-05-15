@@ -1,7 +1,7 @@
 <template>
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
     <div class="container">
-      <add-ticker @add-ticker="add" />
+      <add-ticker @add-ticker="add" :tickers="tickers"/>
       <div>
         <hr v-if="tickers.length" class="w-full border-t border-gray-600 my-1"/>
         <button
@@ -28,7 +28,6 @@
               'border-4': selectedTicker === t,
               'bg-red-300': !t.isExists,
               'bg-white': t.isExists
-
             }"
             class="overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
         >
@@ -62,50 +61,53 @@
           </button>
         </div>
       </div>
-      <hr v-if="selectedTicker" class="w-full border-t border-gray-600 my-4"/>
-      <section v-if="selectedTicker" class="relative">
-        <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          {{ selectedTicker.name.toUpperCase() }} - {{ selectedTicker.rate }}
-        </h3>
-        <div
-            class="flex items-end border-gray-600 border-b border-l h-64"
-            ref="graph"
-        >
-          <div
-              v-for="(bar, idx) in normalizedGraph"
-              :key="idx"
-              ref="graphElement"
-              :style="{height: `${bar}%`, width: `${graphElementWidth}px`}"
-              class="bg-purple-800 border"
-          >
-          </div>
-        </div>
-        <button
-            @click="selectedTicker = null"
-            type="button"
-            class="absolute top-0 right-0"
-        >
-          <svg
-              xmlns="http://www.w3.org/2000/svg"
-              version="1.1"
-              width="30"
-              height="30"
-              x="0"
-              y="0"
-              viewBox="0 0 511.76 511.76"
-              style="enable-background:new 0 0 512 512"
-              xml:space="preserve"
-          >
-          <g>
-            <path
-                d="M436.896,74.869c-99.84-99.819-262.208-99.819-362.048,0c-99.797,99.819-99.797,262.229,0,362.048    c49.92,49.899,115.477,74.837,181.035,74.837s131.093-24.939,181.013-74.837C536.715,337.099,536.715,174.688,436.896,74.869z     M361.461,331.317c8.341,8.341,8.341,21.824,0,30.165c-4.16,4.16-9.621,6.251-15.083,6.251c-5.461,0-10.923-2.091-15.083-6.251    l-75.413-75.435l-75.392,75.413c-4.181,4.16-9.643,6.251-15.083,6.251c-5.461,0-10.923-2.091-15.083-6.251    c-8.341-8.341-8.341-21.845,0-30.165l75.392-75.413l-75.413-75.413c-8.341-8.341-8.341-21.845,0-30.165    c8.32-8.341,21.824-8.341,30.165,0l75.413,75.413l75.413-75.413c8.341-8.341,21.824-8.341,30.165,0    c8.341,8.32,8.341,21.824,0,30.165l-75.413,75.413L361.461,331.317z"
-                fill="#718096"
-                data-original="#000000"
-            ></path>
-          </g>
-        </svg>
-        </button>
-      </section>
+<!--      <hr v-if="selectedTicker" class="w-full border-t border-gray-600 my-4"/>-->
+<!--      <section v-if="selectedTicker" class="relative" style="opacity: 1">-->
+<!--        <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">-->
+<!--          {{ selectedTicker.name.toUpperCase() }} - {{ selectedTicker.rate }}-->
+<!--        </h3>-->
+<!--        <div-->
+<!--            class="flex items-end border-gray-600 border-b border-l h-64"-->
+<!--            ref="graph"-->
+<!--        >-->
+<!--          <div-->
+<!--              v-for="(bar, idx) in normalizedGraph"-->
+<!--              :key="idx"-->
+<!--              ref="graphElement"-->
+<!--              :style="{height: `${bar}%`, width: `${graphElementWidth}px`}"-->
+<!--              class="bg-purple-800 border"-->
+<!--          >-->
+<!--          </div>-->
+<!--        </div>-->
+<!--        <button-->
+<!--            @click="selectedTicker = null"-->
+<!--            type="button"-->
+<!--            class="absolute top-0 right-0"-->
+<!--        >-->
+<!--          <svg-->
+<!--              xmlns="http://www.w3.org/2000/svg"-->
+<!--              version="1.1"-->
+<!--              width="30"-->
+<!--              height="30"-->
+<!--              x="0"-->
+<!--              y="0"-->
+<!--              viewBox="0 0 511.76 511.76"-->
+<!--              style="enable-background:new 0 0 512 512"-->
+<!--              xml:space="preserve"-->
+<!--          >-->
+<!--          <g>-->
+<!--            <path-->
+<!--                d="M436.896,74.869c-99.84-99.819-262.208-99.819-362.048,0c-99.797,99.819-99.797,262.229,0,362.048    c49.92,49.899,115.477,74.837,181.035,74.837s131.093-24.939,181.013-74.837C536.715,337.099,536.715,174.688,436.896,74.869z     M361.461,331.317c8.341,8.341,8.341,21.824,0,30.165c-4.16,4.16-9.621,6.251-15.083,6.251c-5.461,0-10.923-2.091-15.083-6.251    l-75.413-75.435l-75.392,75.413c-4.181,4.16-9.643,6.251-15.083,6.251c-5.461,0-10.923-2.091-15.083-6.251    c-8.341-8.341-8.341-21.845,0-30.165l75.392-75.413l-75.413-75.413c-8.341-8.341-8.341-21.845,0-30.165    c8.32-8.341,21.824-8.341,30.165,0l75.413,75.413l75.413-75.413c8.341-8.341,21.824-8.341,30.165,0    c8.341,8.32,8.341,21.824,0,30.165l-75.413,75.413L361.461,331.317z"-->
+<!--                fill="#718096"-->
+<!--                data-original="#000000"-->
+<!--            ></path>-->
+<!--          </g>-->
+<!--        </svg>-->
+<!--        </button>-->
+<!--      </section>-->
+      <add-graph @delete-graph="deleteGraph" :selectedTicker="selectedTicker" :graph="graph" :maxGraphElements="maxGraphElements">
+        {{maxGraphElements}}
+      </add-graph>
     </div>
   </div>
 </template>
@@ -125,10 +127,12 @@
 // 12. [x] Доработать реализацию функции с запросом на все криптовалюты / Критичность 5
 import {subscribeToTicker, unSubscribeFromTicker} from "./api";
 import AddTicker from "./components/AddTicker";
+import AddGraph from './components/AddGraph'
 export default {
   name: 'App',
   components: {
     AddTicker,
+    AddGraph
   },
   data() {
     return {
@@ -139,7 +143,7 @@ export default {
       graph: [],
       page: 1,
       isExists: false,
-      maxGraphElements: 1,
+      maxGraphElements: 26,
       graphElementWidth: 38,
       keyLocalStorage: 'cryptonomicon-list',
       counterTickersOnPage: 6,
@@ -148,15 +152,12 @@ export default {
   },
   created() {
     const windowData = Object.fromEntries(new URL(window.location).searchParams.entries())
-
     if (windowData.filter) {
       this.filter = windowData.filter
     }
-
     if (windowData.page) {
       this.page = windowData.page
     }
-
     const tickersData = localStorage.getItem(this.keyLocalStorage)
     if (tickersData) {
       this.tickers = JSON.parse(tickersData)
@@ -170,12 +171,6 @@ export default {
       })
     }
   },
-  // updated() {
-  //   this.tickers.forEach(ticker => {
-  //     ticker.isExists = ticker.price === "-" ? ticker.isExists = false : ticker.isExists = true
-  //   })
-  // },
-
   mounted() {
     window.addEventListener('resize', this.calculateMaxGraphElements)
   },
@@ -197,25 +192,12 @@ export default {
     },
     filteredTickers() {
       return this.tickers.filter(t => t.name.toLowerCase().includes(this.filter.toLowerCase()))
-
     },
     paginatedTickers() {
       return this.filteredTickers.slice(this.startIndex, this.endIndex)
     },
-
     hasNextPage() {
       return this.filteredTickers.length > this.endIndex
-    },
-    normalizedGraph() {
-      const maxV = Math.max(...this.graph)
-      const minV = Math.min(...this.graph)
-
-      if (maxV === minV) {
-        return this.graph.map(() => 50)
-      }
-      return this.graph.map(price =>
-          5 + ((price - minV) * 95) / (maxV - minV)
-      )
     },
     pageStateOptions() {
       return {
@@ -295,6 +277,9 @@ export default {
       localStorage.setItem(this.keyLocalStorage, JSON.stringify(this.tickers))
       unSubscribeFromTicker(tickerRemove.name.toUpperCase(), tickerRemove.rate)
     },
+    deleteGraph() {
+      this.selectedTicker = null
+    }
   },
   watch: {
     ticker() {
@@ -303,7 +288,6 @@ export default {
     selectedTicker() {
       this.graph = []
       this.$nextTick().then(this.calculateMaxGraphElements)
-
     },
     normalizedTickers() {
       this.tickers = this.normalizedTickers
